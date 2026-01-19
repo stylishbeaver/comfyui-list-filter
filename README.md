@@ -1,15 +1,16 @@
 # ComfyUI List Filter
 
-A ComfyUI extension that provides dynamic checkbox filtering for lists. Unlike standard nodes that require predefined inputs, this extension creates checkboxes dynamically based on your actual list data - works with any list size!
+A ComfyUI extension that provides dynamic list filtering with an inline toggle UI. Unlike standard nodes that require predefined inputs, this extension creates toggleable pills dynamically based on your actual list data - works with any list size!
 
 ## Features
 
-- ✅ **Truly Dynamic**: Creates checkboxes at runtime based on actual list data
+- ✅ **Truly Dynamic**: Creates toggle pills at runtime based on actual list data
 - ✅ **Unlimited Items**: Works with 5 items or 500 items equally well
-- ✅ **Professional UI**: Polished modal interface with Select All/Deselect All
-- ✅ **User-Friendly**: All items selected by default for easy filtering
-- ✅ **Responsive**: Scrollable for large lists, mobile-friendly design
-- ✅ **Simple Integration**: Two simple nodes for workflow integration
+- ✅ **Inline Toggle UI**: Toggleable pills directly in the node (inspired by EreNodes)
+- ✅ **Click to Toggle**: Simply click any item to enable/disable it
+- ✅ **State Preservation**: Toggle states persist when the input list changes
+- ✅ **User-Friendly**: All items active by default for easy filtering
+- ✅ **Single Node**: One node handles both input and filtered output
 
 ## Installation
 
@@ -32,62 +33,62 @@ A ComfyUI extension that provides dynamic checkbox filtering for lists. Unlike s
 
 ## Usage
 
-### Basic Workflow
+### Basic Workflow (Toggle UI - Recommended)
 
-1. **Add a ListFilterInput node** to your workflow
+1. **Add a ListFilterToggle node** to your workflow
    - Category: `list/filtering`
-   - Node name: "List Filter Input"
+   - Node name: "List Filter (Toggle UI)"
 
 2. **Enter your list as JSON** in the `items_json` field:
    ```json
    ["apple", "banana", "cherry", "date", "elderberry"]
    ```
 
-3. **Select the node** by clicking on it
+3. **Items appear as toggle pills** directly in the node (all active by default)
 
-4. **Click the "List Filter" button** in the ComfyUI menu bar
+4. **Click any pill to toggle it** on/off
+   - Active items: Blue toggle, white text
+   - Inactive items: Gray toggle, dimmed text
 
-5. **Modal opens** showing checkboxes for each item (all checked by default)
-
-6. **Uncheck items** you want to exclude
-
-7. **Click "Apply Filter"** to send filtered list to the workflow
-
-8. **Connect to ListFilterOutput node** to use the filtered results
+5. **Connect the outputs** to other nodes:
+   - `filtered_items`: JSON array of active items only
+   - `count`: Number of active items
 
 ### Example Workflow
 
 ```
-┌─────────────────────┐
-│ List Filter Input   │
-│ ["a","b","c","d"]   │
-└──────────┬──────────┘
-           │
-           │ (User clicks "List Filter" button)
-           │ (Modal opens with 4 checkboxes)
-           │ (User unchecks "b" and "d")
-           │
-           ▼
-┌─────────────────────┐
-│ List Filter Output  │
-│ ["a","c"]           │
-│ count: 2            │
-└─────────────────────┘
+┌──────────────────────────────┐
+│ List Filter (Toggle UI)      │
+│                               │
+│ ● apple         (active)      │
+│ ○ banana        (inactive)    │
+│ ● cherry        (active)      │
+│ ○ date          (inactive)    │
+│                               │
+│ filtered_items: ["apple", "cherry"]
+│ count: 2                      │
+└──────────────┬───────────────┘
+               │
+               ▼
+         (Your workflow)
 ```
 
-### Modal Features
+### Toggle UI Features
 
-**Toolbar Actions:**
-- **Select All**: Check all checkboxes
-- **Deselect All**: Uncheck all checkboxes
-- **Item Count**: Shows how many items are selected
+- **Direct Interaction**: Click any item to toggle on/off
+- **Visual Feedback**: Active items clearly distinguished from inactive
+- **State Persistence**: Toggle states preserved when input list changes
+- **No Modal**: Everything happens inline in the node
+- **Full-Width Pills**: Easy to read and click
+- **Automatic Layout**: Scrolls naturally with long lists
 
-**Keyboard Shortcuts:**
-- `Escape`: Close modal without applying
+### Legacy Modal Workflow
 
-**Mouse Actions:**
-- Click backdrop to close
-- Click × to close
+For backward compatibility, the old modal-based nodes are still available:
+- `List Filter Input (Deprecated)`
+- `List Filter Output (Deprecated)`
+
+These work the same as before but the new Toggle UI is recommended for a better user experience.
 
 ## API Endpoints
 
@@ -126,7 +127,25 @@ Health check endpoint.
 
 ## Nodes
 
-### ListFilterInput
+### ListFilterToggle (Recommended)
+
+**Category:** `list/filtering`
+**Display Name:** "List Filter (Toggle UI)"
+
+**Inputs:**
+- `items_json` (STRING): JSON array of items to filter
+
+**Outputs:**
+- `filtered_items` (STRING): JSON array of active items only
+- `count` (INT): Number of active items
+
+**Features:**
+- Inline toggle pill UI (no modal required)
+- Click any pill to toggle on/off
+- State persistence when input list changes
+- Visual feedback for active/inactive items
+
+### ListFilterInput (Deprecated)
 
 **Category:** `list/filtering`
 
@@ -136,7 +155,7 @@ Health check endpoint.
 **Outputs:**
 - `items` (STRING): The input JSON (validated)
 
-### ListFilterOutput
+### ListFilterOutput (Deprecated)
 
 **Category:** `list/filtering`
 
@@ -151,24 +170,26 @@ Health check endpoint.
 
 ### Architecture
 
-- **Backend**: Python (aiohttp routes for filtering logic)
-- **Frontend**: JavaScript ES6 modules (modal UI with dynamic rendering)
-- **Styling**: CSS3 with dark theme matching ComfyUI
+- **Backend**: Python (ComfyUI nodes with JSON handling)
+- **Frontend**: JavaScript ES6 modules (inline toggle UI with custom canvas drawing)
+- **Rendering**: Custom onDrawForeground override for dynamic pill rendering
+- **State Management**: Node properties for toggle state persistence
 
 ### File Structure
 
 ```
 comfyui-list-filter/
-├── __init__.py               # Extension registration
-├── server_routes.py          # API endpoints
-├── nodes.py                  # ComfyUI nodes
+├── __init__.py                    # Extension registration
+├── server_routes.py               # API endpoints (legacy modal)
+├── nodes.py                       # ComfyUI nodes
 ├── web/
 │   ├── js/
-│   │   ├── list_filter.js    # Main extension entry
+│   │   ├── list_filter.js         # Legacy modal extension
+│   │   ├── list_filter_toggle.js  # New toggle UI extension
 │   │   └── ui/
-│   │       └── modal.js      # Modal component
+│   │       └── modal.js           # Modal component (legacy)
 │   └── css/
-│       └── style.css         # Modal styling
+│       └── style.css              # Modal styling (legacy)
 ├── README.md
 └── requirements.txt
 ```
@@ -245,6 +266,7 @@ MIT License - see LICENSE file for details
 Created as a proof-of-concept for dynamic UI in ComfyUI extensions.
 
 Inspired by:
+- **ComfyUI-EreNodes** (toggle pill UI approach and custom canvas drawing)
 - ComfyUI-Visionatrix (node patterns)
 - ComfyUI-HF-Downloader (extension structure)
 - Civicomfy (modal UI patterns)
@@ -255,4 +277,4 @@ For issues, questions, or feature requests, please open an issue on GitHub.
 
 ---
 
-**Note**: This extension demonstrates that TRUE dynamic widgets in ComfyUI require JavaScript extensions. Standard ComfyUI nodes cannot create dynamic UI elements at runtime - their inputs must be predefined at class registration time.
+**Note**: This extension demonstrates that TRUE dynamic widgets in ComfyUI require JavaScript extensions with custom canvas drawing. By overriding `onDrawForeground` and `onMouseDown`, you can create fully dynamic UI elements that respond to runtime data - a technique pioneered by extensions like EreNodes. Standard ComfyUI nodes cannot create dynamic UI elements at runtime since their inputs must be predefined at class registration time.
