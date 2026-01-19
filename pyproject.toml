@@ -1,0 +1,14 @@
+[project]
+name = "comfyui-list-filter"
+version = "1.0.0"
+description = "Dynamic list filtering with inline toggle UI for ComfyUI. Creates toggleable pills at runtime based on actual list data - works with any list size!"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+[project.urls]
+Repository = "https://github.com/stylishbeaver/comfyui-list-filter"
+
+[tool.comfy]
+PublisherId = "stylishbeaver"
+DisplayName = "List Filter (Toggle UI)"
+Icon = ""
