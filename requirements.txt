@@ -1,0 +1,2 @@
+# ComfyUI List Filter Extension
+# No additional Python packages required beyond ComfyUI's dependencies

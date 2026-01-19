@@ -1,0 +1,251 @@
+/**
+ * ComfyUI List Filter - Modal Styles
+ */
+
+/* Backdrop overlay */
+.list-filter-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Modal container */
+.list-filter-modal {
+    background: #1e1e1e;
+    border: 1px solid #444;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    color: #e0e0e0;
+}
+
+/* Header */
+.list-filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #444;
+}
+
+.list-filter-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.list-filter-close {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.list-filter-close:hover {
+    background-color: #333;
+    color: #fff;
+}
+
+/* Body */
+.list-filter-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Toolbar */
+.list-filter-toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #333;
+}
+
+.list-filter-count {
+    margin-left: auto;
+    font-size: 14px;
+    color: #aaa;
+}
+
+/* Checkbox container */
+.list-filter-checkboxes {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+/* Custom scrollbar for checkbox container */
+.list-filter-checkboxes::-webkit-scrollbar {
+    width: 8px;
+}
+
+.list-filter-checkboxes::-webkit-scrollbar-track {
+    background: #2a2a2a;
+    border-radius: 4px;
+}
+
+.list-filter-checkboxes::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+.list-filter-checkboxes::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+/* Individual checkbox item */
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    cursor: pointer;
+}
+
+.checkbox-item:hover {
+    background-color: #2a2a2a;
+}
+
+.checkbox-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    margin-right: 12px;
+    cursor: pointer;
+    accent-color: #4a9eff;
+}
+
+.checkbox-item label {
+    flex: 1;
+    cursor: pointer;
+    user-select: none;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #e0e0e0;
+}
+
+/* Message display */
+.list-filter-message {
+    margin-top: 16px;
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    display: none;
+}
+
+.list-filter-message-info {
+    background-color: #1a3a5a;
+    border-left: 4px solid #4a9eff;
+    color: #a8d0ff;
+}
+
+.list-filter-message-warning {
+    background-color: #5a4a1a;
+    border-left: 4px solid #ffb84a;
+    color: #ffd89a;
+}
+
+.list-filter-message-error {
+    background-color: #5a1a1a;
+    border-left: 4px solid #ff4a4a;
+    color: #ffa8a8;
+}
+
+/* Footer */
+.list-filter-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid #444;
+}
+
+/* Buttons */
+.list-filter-btn {
+    padding: 8px 16px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.list-filter-btn:hover {
+    background-color: #333;
+    border-color: #666;
+}
+
+.list-filter-btn:active {
+    background-color: #1a1a1a;
+}
+
+.list-filter-btn-primary {
+    background-color: #4a9eff;
+    border-color: #4a9eff;
+    color: #fff;
+}
+
+.list-filter-btn-primary:hover {
+    background-color: #3a8eef;
+    border-color: #3a8eef;
+}
+
+.list-filter-btn-primary:active {
+    background-color: #2a7edf;
+}
+
+.list-filter-btn-secondary {
+    background-color: #3a3a3a;
+    border-color: #555;
+}
+
+.list-filter-btn-secondary:hover {
+    background-color: #444;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .list-filter-modal {
+        width: 95%;
+        max-height: 90vh;
+    }
+
+    .list-filter-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .list-filter-count {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 8px;
+    }
+}
