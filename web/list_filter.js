@@ -6,7 +6,7 @@
  */
 
 import { app } from "../../scripts/app.js";
-import { ListFilterModal } from "./ui/modal.js";
+import { ListFilterModal } from "./js/ui/modal.js";
 
 // Global modal instance
 let listFilterModal = null;
