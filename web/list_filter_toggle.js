@@ -53,6 +53,12 @@ app.registerExtension({
                 node.properties._itemsData = "[]";
             }
 
+            // Set proper initial size to accommodate outputs
+            // Height = header (30) + toggle area (50) + output space (40)
+            if (!node.size || node.size[1] < 120) {
+                node.size = [240, 120];
+            }
+
             // Find and hide the input widget
             const inputWidget = node.widgets?.find(w => w.name === "items");
             if (inputWidget) {
@@ -89,13 +95,22 @@ app.registerExtension({
                         }
                     }
 
-                    // If still no items, bail
-                    if (!items || !Array.isArray(items)) {
+                    // Validate items is an array (empty arrays are valid)
+                    if (!Array.isArray(items)) {
                         console.info("[List Filter Toggle] No valid items to sync");
+                        this.setItemsData([]);
+                        this.updateOutputWidget();
                         return;
                     }
 
                     console.info("[List Filter Toggle] Syncing items", items.length);
+
+                    // Handle empty list
+                    if (items.length === 0) {
+                        this.setItemsData([]);
+                        this.updateOutputWidget();
+                        return;
+                    }
 
                     // Parse existing toggle state
                     const existingData = parseItems(this.properties._itemsData || "[]");
@@ -153,17 +168,21 @@ app.registerExtension({
 
             // Update the filtered output widget value based on active items
             node.updateOutputWidget = function() {
-                const outputWidget = this.widgets?.find(w => w.name === "output");
-                if (!outputWidget) return;
+                try {
+                    const outputWidget = this.widgets?.find(w => w.name === "output");
+                    if (!outputWidget) return;
 
-                const itemsData = parseItems(this.properties._itemsData || "[]");
-                const activeItems = itemsData.filter(i => i.active).map(i => i.name);
+                    const itemsData = parseItems(this.properties._itemsData || "[]");
+                    const activeItems = itemsData.filter(i => i && i.active).map(i => i.name);
 
-                // Update the output widget value (like EreNodes updates textWidget.value)
-                outputWidget.value = JSON.stringify(activeItems);
+                    // Update the output widget value (like EreNodes updates textWidget.value)
+                    outputWidget.value = JSON.stringify(activeItems);
 
-                // Mark graph as dirty to trigger recomputation
-                app.graph.setDirtyCanvas(true, true);
+                    // Mark graph as dirty to trigger recomputation
+                    app.graph.setDirtyCanvas(true, true);
+                } catch (error) {
+                    console.error("[List Filter Toggle] Error updating output widget:", error);
+                }
             };
 
             // Handle mouse clicks on pills
@@ -246,6 +265,15 @@ app.registerExtension({
             let currentY = pillY;
 
             const positions = [];
+
+            // Handle empty list case
+            if (!itemsData || itemsData.length === 0) {
+                this._pillMap = [];
+                this._tagAreaBottom = pillY;
+                const minHeight = 120;
+                this._measuredHeight = minHeight;
+                return;
+            }
 
             // Calculate positions for each pill
             for (const item of itemsData) {
@@ -363,7 +391,11 @@ app.registerExtension({
 
             // Calculate total height
             this._tagAreaBottom = currentY;
-            this._measuredHeight = currentY + pillPadding;
+
+            // Minimum height to accommodate outputs (30px header + 50px content + 40px outputs)
+            const minHeight = 120;
+            const calculatedHeight = currentY + pillPadding + 20; // Add space below toggles for outputs
+            this._measuredHeight = Math.max(minHeight, calculatedHeight);
 
             // Resize node if needed
             if (isFinite(this._measuredHeight) && this._measuredHeight && this.size[1] !== this._measuredHeight) {
@@ -372,15 +404,15 @@ app.registerExtension({
             }
         };
 
-        // Override onResize to maintain height
+        // Override onResize to maintain minimum height
         const origResize = nodeType.prototype.onResize;
-        nodeType.prototype.onResize = function() {
+        nodeType.prototype.onResize = function(size) {
             if (origResize) origResize.apply(this, arguments);
 
-            if (!this._measuredHeight) return;
-
-            if (this.size[1] !== this._measuredHeight) {
-                this.setSize([this.size[0], this._measuredHeight]);
+            // Enforce minimum height
+            const minHeight = 120;
+            if (this.size[1] < minHeight) {
+                this.size[1] = minHeight;
             }
         };
 
