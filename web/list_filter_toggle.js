@@ -54,9 +54,10 @@ app.registerExtension({
             }
 
             // Set proper initial size to accommodate outputs
-            // Height = header (30) + toggle area (50) + output space (40)
-            if (!node.size || node.size[1] < 120) {
-                node.size = [240, 120];
+            // Height = header (60) + toggle area (40) + output space (80)
+            // ComfyUI needs space for 2 outputs (filtered_items + count) = ~50px
+            if (!node.size || node.size[1] < 180) {
+                node.size = [240, 180];
             }
 
             // Find and hide the input widget
@@ -270,7 +271,7 @@ app.registerExtension({
             if (!itemsData || itemsData.length === 0) {
                 this._pillMap = [];
                 this._tagAreaBottom = pillY;
-                const minHeight = 120;
+                const minHeight = 180;
                 this._measuredHeight = minHeight;
                 return;
             }
@@ -392,9 +393,9 @@ app.registerExtension({
             // Calculate total height
             this._tagAreaBottom = currentY;
 
-            // Minimum height to accommodate outputs (30px header + 50px content + 40px outputs)
-            const minHeight = 120;
-            const calculatedHeight = currentY + pillPadding + 20; // Add space below toggles for outputs
+            // Minimum height to accommodate outputs (60px header + 40px content + 80px outputs)
+            const minHeight = 180;
+            const calculatedHeight = currentY + pillPadding + 60; // Add space below toggles for outputs
             this._measuredHeight = Math.max(minHeight, calculatedHeight);
 
             // Resize node if needed
@@ -409,8 +410,8 @@ app.registerExtension({
         nodeType.prototype.onResize = function(size) {
             if (origResize) origResize.apply(this, arguments);
 
-            // Enforce minimum height
-            const minHeight = 120;
+            // Enforce minimum height (must match minHeight in onDrawForeground)
+            const minHeight = 180;
             if (this.size[1] < minHeight) {
                 this.size[1] = minHeight;
             }
