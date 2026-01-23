@@ -69,11 +69,11 @@ app.registerExtension({
                 };
             }
 
-            // Find and hide the trigger widget (used for forcing refresh)
-            const triggerWidget = node.widgets?.find(w => w.name === "trigger");
-            if (triggerWidget) {
-                triggerWidget.computeSize = () => [0, 0];
-                triggerWidget.hidden = true;
+            // Find and hide the output widget (updated by JS, read by downstream nodes)
+            const outputWidget = node.widgets?.find(w => w.name === "output");
+            if (outputWidget) {
+                outputWidget.computeSize = () => [0, 0];
+                outputWidget.hidden = true;
             }
 
             // Initialize items data from widget value or direct input
@@ -153,30 +153,17 @@ app.registerExtension({
 
             // Update the filtered output widget value based on active items
             node.updateOutputWidget = function() {
+                const outputWidget = this.widgets?.find(w => w.name === "output");
+                if (!outputWidget) return;
+
                 const itemsData = parseItems(this.properties._itemsData || "[]");
                 const activeItems = itemsData.filter(i => i.active).map(i => i.name);
 
-                // The actual filtering happens in Python, but we update internal state
-                // This ensures the visual state matches what will be output
-                this._filteredItems = activeItems;
+                // Update the output widget value (like EreNodes updates textWidget.value)
+                outputWidget.value = JSON.stringify(activeItems);
 
                 // Mark graph as dirty to trigger recomputation
                 app.graph.setDirtyCanvas(true, true);
-            };
-
-            // Force refresh by incrementing trigger
-            node.forceRefresh = function() {
-                const triggerWidget = this.widgets?.find(w => w.name === "trigger");
-                if (triggerWidget) {
-                    triggerWidget.value = (triggerWidget.value || 0) + 1;
-                    console.info("[List Filter Toggle] Force refresh, trigger =", triggerWidget.value);
-
-                    // Mark graph as changed to queue execution
-                    if (app.graph && typeof app.graph.change === "function") {
-                        app.graph.change();
-                    }
-                    app.graph.setDirtyCanvas(true, true);
-                }
             };
 
             // Handle mouse clicks on pills
@@ -201,17 +188,9 @@ app.registerExtension({
                     }
 
                     if (clickedPill) {
-                        // Handle button clicks
-                        if (clickedPill.button) {
-                            if (clickedPill.label === "button_refresh") {
-                                this.forceRefresh();
-                                return true;
-                            }
-                        } else {
-                            // Handle toggle pill clicks
-                            this.onPillClick(clickedPill);
-                            return true;
-                        }
+                        // Handle toggle pill clicks
+                        this.onPillClick(clickedPill);
+                        return true;
                     }
                 }
 
@@ -267,23 +246,6 @@ app.registerExtension({
             let currentY = pillY;
 
             const positions = [];
-
-            // Add refresh button
-            const buttonSize = 24;
-            positions.push({
-                x: currentX,
-                y: currentY,
-                w: buttonSize,
-                h: buttonSize,
-                label: "button_refresh",
-                display: "⟳",
-                button: true
-            });
-            currentX += buttonSize + pillSpacing;
-
-            // Move to next line for items (always, to ensure proper height calculation)
-            currentX = pillX;
-            currentY += buttonSize + pillSpacing;
 
             // Calculate positions for each pill
             for (const item of itemsData) {
