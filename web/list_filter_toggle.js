@@ -11,13 +11,13 @@ app.registerExtension({
     name: "ListFilterToggle",
 
     async setup() {
-        console.log("[List Filter Toggle] Setting up extension");
+        console.info("[List Filter Toggle] Setting up extension");
     },
 
     beforeRegisterNodeDef(nodeType, nodeData, app) {
         if (nodeData.name !== "ListFilterToggle") return;
 
-        console.log("[List Filter Toggle] Registering node type");
+        console.info("[List Filter Toggle] Registering node type");
 
         // Layout constants for pill drawing
         const pillX = 10;
@@ -44,6 +44,8 @@ app.registerExtension({
             if (origCreated) origCreated.apply(this, arguments);
 
             const node = this;
+
+            console.info("[List Filter Toggle] Node created", node.id);
 
             // Initialize properties
             node.properties = node.properties || {};
@@ -79,6 +81,8 @@ app.registerExtension({
                         return;
                     }
 
+                    console.info("[List Filter Toggle] Syncing items", items.length);
+
                     // Parse existing toggle state
                     const existingData = parseItems(this.properties._itemsData || "[]");
                     const existingStates = new Map(existingData.map(i => [i.name, i.active]));
@@ -99,6 +103,8 @@ app.registerExtension({
 
             node.applyItemsFromServer = function(items) {
                 if (!Array.isArray(items)) return;
+
+                console.info("[List Filter Toggle] Applying items from server", items.length);
 
                 const inputWidget = this.widgets?.find(w => w.name === "items_json");
                 if (inputWidget) {
@@ -175,6 +181,8 @@ app.registerExtension({
         const origExecuted = nodeType.prototype.onExecuted;
         nodeType.prototype.onExecuted = function(message) {
             if (origExecuted) origExecuted.apply(this, arguments);
+
+            console.info("[List Filter Toggle] onExecuted", message);
 
             const items = message?.ui?.items;
             if (Array.isArray(items)) {
@@ -349,4 +357,4 @@ app.registerExtension({
     }
 });
 
-console.log("[List Filter Toggle] Extension loaded");
+console.info("[List Filter Toggle] Extension loaded");

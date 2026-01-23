@@ -6,6 +6,11 @@ Users can click pills to enable/disable items without opening a modal.
 """
 
 import json
+import logging
+
+
+logger = logging.getLogger("comfyui-list-filter")
+logger.setLevel(logging.INFO)
 
 
 class ListFilterToggle:
@@ -31,6 +36,7 @@ class ListFilterToggle:
     RETURN_TYPES = ("STRING", "INT")
     RETURN_NAMES = ("filtered_items", "count")
     FUNCTION = "filter_items"
+    OUTPUT_NODE = True
     CATEGORY = "list/filtering"
 
     def filter_items(self, items_json, unique_id="", extra_pnginfo=None):
@@ -42,11 +48,24 @@ class ListFilterToggle:
         """
         try:
             # Parse input list
+            logger.info(
+                "[ListFilterToggle] filter_items start (node_id=%s, has_workflow=%s)",
+                unique_id,
+                bool(extra_pnginfo and "workflow" in extra_pnginfo),
+            )
             items_raw = json.loads(items_json)
             if not isinstance(items_raw, list):
+                logger.info(
+                    "[ListFilterToggle] items_json is not a list (type=%s)",
+                    type(items_raw).__name__,
+                )
                 items_raw = []
 
             items = [str(item) for item in items_raw]
+            logger.info(
+                "[ListFilterToggle] parsed items count=%d",
+                len(items),
+            )
             active_map = {name: True for name in items}
 
             # Try to get toggle state from workflow metadata
@@ -65,19 +84,31 @@ class ListFilterToggle:
                             try:
                                 items_data = json.loads(items_data_json)
                                 if isinstance(items_data, list):
+                                    logger.info(
+                                        "[ListFilterToggle] toggle state items=%d",
+                                        len(items_data),
+                                    )
                                     for item in items_data:
                                         name = str(item.get("name", ""))
                                         if name in active_map:
                                             active_map[name] = bool(item.get("active", True))
                             except (json.JSONDecodeError, KeyError):
+                                logger.info(
+                                    "[ListFilterToggle] failed to parse _itemsData"
+                                )
                                 pass
                             break
 
             filtered = [name for name in items if active_map.get(name, True)]
             filtered_json = json.dumps(filtered) if filtered else "[]"
+            logger.info(
+                "[ListFilterToggle] filtered count=%d",
+                len(filtered),
+            )
             return {"ui": {"items": items}, "result": (filtered_json, len(filtered))}
 
         except (json.JSONDecodeError, TypeError):
+            logger.info("[ListFilterToggle] invalid JSON input")
             return {"ui": {"items": []}, "result": ("[]", 0)}
 
 
