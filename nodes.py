@@ -30,6 +30,9 @@ class ListFilterToggle:
                     "multiline": True
                 }),
             },
+            "optional": {
+                "items_list": ("LIST",),
+            },
             "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO"}
         }
 
@@ -39,7 +42,7 @@ class ListFilterToggle:
     OUTPUT_NODE = True
     CATEGORY = "list/filtering"
 
-    def filter_items(self, items_json, unique_id="", extra_pnginfo=None):
+    def filter_items(self, items_json, items_list=None, unique_id="", extra_pnginfo=None):
         """
         Filter items based on toggle state stored in node properties.
 
@@ -54,13 +57,44 @@ class ListFilterToggle:
                 bool(extra_pnginfo and "workflow" in extra_pnginfo),
             )
             logger.info("[ListFilterToggle] raw items_json=%s", items_json)
-            items_raw = json.loads(items_json)
-            if not isinstance(items_raw, list):
+            logger.info("[ListFilterToggle] raw items_list=%s", items_list)
+            logger.info(
+                "[ListFilterToggle] items_json type=%s",
+                type(items_json).__name__,
+            )
+            logger.info(
+                "[ListFilterToggle] items_list type=%s",
+                type(items_list).__name__,
+            )
+
+            items_raw = None
+            if isinstance(items_list, (list, tuple)):
+                items_raw = list(items_list)
                 logger.info(
-                    "[ListFilterToggle] items_json is not a list (type=%s)",
-                    type(items_raw).__name__,
+                    "[ListFilterToggle] using items_list (count=%d)",
+                    len(items_raw),
                 )
-                items_raw = []
+            elif isinstance(items_json, (list, tuple)):
+                items_raw = list(items_json)
+                logger.info(
+                    "[ListFilterToggle] using items_json list (count=%d)",
+                    len(items_raw),
+                )
+            else:
+                if isinstance(items_json, str):
+                    items_raw = json.loads(items_json)
+                    if not isinstance(items_raw, list):
+                        logger.info(
+                            "[ListFilterToggle] items_json is not a list (type=%s)",
+                            type(items_raw).__name__,
+                        )
+                        items_raw = []
+                else:
+                    logger.info(
+                        "[ListFilterToggle] items_json not usable (type=%s)",
+                        type(items_json).__name__,
+                    )
+                    items_raw = []
 
             items = [str(item) for item in items_raw]
             for idx, name in enumerate(items):
