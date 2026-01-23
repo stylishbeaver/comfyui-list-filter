@@ -74,6 +74,30 @@ class ListFilterToggle:
                     "[ListFilterToggle] using items_list (count=%d)",
                     len(items_raw),
                 )
+            elif isinstance(items_list, str) and items_list.strip():
+                logger.info("[ListFilterToggle] parsing items_list string")
+                parsed = None
+                if items_list.lstrip().startswith("["):
+                    try:
+                        parsed = json.loads(items_list)
+                    except json.JSONDecodeError:
+                        parsed = None
+                if isinstance(parsed, list):
+                    items_raw = parsed
+                    logger.info(
+                        "[ListFilterToggle] items_list JSON parsed (count=%d)",
+                        len(items_raw),
+                    )
+                else:
+                    items_raw = [
+                        part.strip()
+                        for part in items_list.split(",")
+                        if part.strip()
+                    ]
+                    logger.info(
+                        "[ListFilterToggle] items_list split (count=%d)",
+                        len(items_raw),
+                    )
             elif isinstance(items_json, (list, tuple)):
                 items_raw = list(items_json)
                 logger.info(
@@ -82,7 +106,10 @@ class ListFilterToggle:
                 )
             else:
                 if isinstance(items_json, str):
-                    items_raw = json.loads(items_json)
+                    try:
+                        items_raw = json.loads(items_json)
+                    except json.JSONDecodeError:
+                        items_raw = []
                     if not isinstance(items_raw, list):
                         logger.info(
                             "[ListFilterToggle] items_json is not a list (type=%s)",
@@ -145,11 +172,11 @@ class ListFilterToggle:
                 len(filtered),
             )
             logger.info("[ListFilterToggle] output json=%s", filtered_json)
-            return {"ui": {"items": items}, "result": (filtered_json, len(filtered))}
+            return {"ui": {"items": (items,)}, "result": (filtered_json, len(filtered))}
 
         except (json.JSONDecodeError, TypeError):
             logger.info("[ListFilterToggle] invalid JSON input")
-            return {"ui": {"items": []}, "result": ("[]", 0)}
+            return {"ui": {"items": ([],)}, "result": ("[]", 0)}
 
 
 # Keep old nodes for backward compatibility but mark as deprecated

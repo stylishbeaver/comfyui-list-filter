@@ -184,7 +184,13 @@ app.registerExtension({
 
             console.info("[List Filter Toggle] onExecuted", message);
 
-            const items = message?.ui?.items;
+            let items = message?.items ?? message?.ui?.items;
+            if (Array.isArray(items) && items.length === 1 && Array.isArray(items[0])) {
+                items = items[0];
+            }
+
+            console.info("[List Filter Toggle] onExecuted items", items);
+
             if (Array.isArray(items)) {
                 this.applyItemsFromServer(items);
             }
