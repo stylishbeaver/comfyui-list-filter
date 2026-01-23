@@ -93,11 +93,29 @@ app.registerExtension({
                         active: existingStates.has(String(item)) ? existingStates.get(String(item)) : true
                     }));
 
-                    this.properties._itemsData = JSON.stringify(newItemsData);
+                    this.setItemsData(newItemsData);
                     this.updateOutputWidget();
                 } catch (e) {
                     console.error("[List Filter Toggle] Error syncing items:", e);
-                    this.properties._itemsData = "[]";
+                    this.setItemsData([]);
+                }
+            };
+
+            node.setItemsData = function(itemsData) {
+                const serialized = JSON.stringify(itemsData);
+
+                if (this.properties?._itemsData === serialized) {
+                    return;
+                }
+
+                if (typeof this.setProperty === "function") {
+                    this.setProperty("_itemsData", serialized);
+                } else {
+                    this.properties._itemsData = serialized;
+                }
+
+                if (app.graph && typeof app.graph.change === "function") {
+                    app.graph.change();
                 }
             };
 
@@ -167,7 +185,7 @@ app.registerExtension({
 
                 if (item) {
                     item.active = !item.active;
-                    this.properties._itemsData = JSON.stringify(itemsData);
+                    this.setItemsData(itemsData);
                     this.updateOutputWidget();
                     app.graph.setDirtyCanvas(true, true);
                 }
