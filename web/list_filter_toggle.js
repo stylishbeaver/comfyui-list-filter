@@ -256,8 +256,7 @@ app.registerExtension({
 
         // Override onDrawForeground to draw toggle pills
         nodeType.prototype.onDrawForeground = function(ctx) {
-            const inputWidget = this.widgets?.find(w => w.name === "items");
-            if (!inputWidget || this.flags?.collapsed) return;
+            if (this.flags?.collapsed) return;
 
             const itemsData = parseItems(this.properties._itemsData || "[]");
 
