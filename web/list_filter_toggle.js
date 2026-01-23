@@ -76,15 +76,22 @@ app.registerExtension({
                 triggerWidget.hidden = true;
             }
 
-            // Initialize items data from widget value
-            node.syncItemsData = function() {
-                const inputWidget = this.widgets?.find(w => w.name === "items");
-                if (!inputWidget) return;
-
+            // Initialize items data from widget value or direct input
+            node.syncItemsData = function(itemsArray) {
                 try {
-                    const items = JSON.parse(inputWidget.value || "[]");
-                    if (!Array.isArray(items)) {
-                        this.properties._itemsData = "[]";
+                    let items = itemsArray;
+
+                    // If no items passed, try to get from widget
+                    if (!items) {
+                        const inputWidget = this.widgets?.find(w => w.name === "items");
+                        if (inputWidget && inputWidget.value) {
+                            items = JSON.parse(inputWidget.value || "[]");
+                        }
+                    }
+
+                    // If still no items, bail
+                    if (!items || !Array.isArray(items)) {
+                        console.info("[List Filter Toggle] No valid items to sync");
                         return;
                     }
 
@@ -131,6 +138,7 @@ app.registerExtension({
 
                 console.info("[List Filter Toggle] Applying items from server", items.length);
 
+                // Update widget if it exists (when input is not connected)
                 const inputWidget = this.widgets?.find(w => w.name === "items");
                 if (inputWidget) {
                     const serialized = JSON.stringify(items);
@@ -139,7 +147,8 @@ app.registerExtension({
                     }
                 }
 
-                this.syncItemsData();
+                // Sync items directly (works even when widget doesn't exist)
+                this.syncItemsData(items);
             };
 
             // Update the filtered output widget value based on active items
