@@ -53,6 +53,7 @@ class ListFilterToggle:
                 unique_id,
                 bool(extra_pnginfo and "workflow" in extra_pnginfo),
             )
+            logger.info("[ListFilterToggle] raw items_json=%s", items_json)
             items_raw = json.loads(items_json)
             if not isinstance(items_raw, list):
                 logger.info(
@@ -62,6 +63,8 @@ class ListFilterToggle:
                 items_raw = []
 
             items = [str(item) for item in items_raw]
+            for idx, name in enumerate(items):
+                logger.info("[ListFilterToggle] item[%d]=%s", idx, name)
             logger.info(
                 "[ListFilterToggle] parsed items count=%d",
                 len(items),
@@ -101,10 +104,13 @@ class ListFilterToggle:
 
             filtered = [name for name in items if active_map.get(name, True)]
             filtered_json = json.dumps(filtered) if filtered else "[]"
+            for idx, name in enumerate(filtered):
+                logger.info("[ListFilterToggle] output[%d]=%s", idx, name)
             logger.info(
                 "[ListFilterToggle] filtered count=%d",
                 len(filtered),
             )
+            logger.info("[ListFilterToggle] output json=%s", filtered_json)
             return {"ui": {"items": items}, "result": (filtered_json, len(filtered))}
 
         except (json.JSONDecodeError, TypeError):
