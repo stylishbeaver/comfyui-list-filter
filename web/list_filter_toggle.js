@@ -97,6 +97,20 @@ app.registerExtension({
                 }
             };
 
+            node.applyItemsFromServer = function(items) {
+                if (!Array.isArray(items)) return;
+
+                const inputWidget = this.widgets?.find(w => w.name === "items_json");
+                if (inputWidget) {
+                    const serialized = JSON.stringify(items);
+                    if (inputWidget.value !== serialized) {
+                        inputWidget.value = serialized;
+                    }
+                }
+
+                this.syncItemsData();
+            };
+
             // Update the filtered output widget value based on active items
             node.updateOutputWidget = function() {
                 const itemsData = parseItems(this.properties._itemsData || "[]");
@@ -155,6 +169,17 @@ app.registerExtension({
 
             // Initial sync
             node.syncItemsData();
+        };
+
+        // Capture backend UI data after execution to refresh list items.
+        const origExecuted = nodeType.prototype.onExecuted;
+        nodeType.prototype.onExecuted = function(message) {
+            if (origExecuted) origExecuted.apply(this, arguments);
+
+            const items = message?.ui?.items;
+            if (Array.isArray(items)) {
+                this.applyItemsFromServer(items);
+            }
         };
 
         // Override onDrawForeground to draw toggle pills

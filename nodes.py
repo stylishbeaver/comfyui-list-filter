@@ -21,7 +21,7 @@ class ListFilterToggle:
         return {
             "required": {
                 "items_json": ("STRING", {
-                    "default": '["item1", "item2", "item3"]',
+                    "default": "[]",
                     "multiline": True
                 }),
             },
@@ -42,9 +42,12 @@ class ListFilterToggle:
         """
         try:
             # Parse input list
-            items = json.loads(items_json)
-            if not isinstance(items, list):
-                return ('[]', 0)
+            items_raw = json.loads(items_json)
+            if not isinstance(items_raw, list):
+                items_raw = []
+
+            items = [str(item) for item in items_raw]
+            active_map = {name: True for name in items}
 
             # Try to get toggle state from workflow metadata
             filtered = items  # Default: return all items
@@ -62,17 +65,20 @@ class ListFilterToggle:
                             try:
                                 items_data = json.loads(items_data_json)
                                 if isinstance(items_data, list):
-                                    # Filter to only active items
-                                    filtered = [item["name"] for item in items_data if item.get("active", True)]
+                                    for item in items_data:
+                                        name = str(item.get("name", ""))
+                                        if name in active_map:
+                                            active_map[name] = bool(item.get("active", True))
                             except (json.JSONDecodeError, KeyError):
                                 pass
                             break
 
-            filtered_json = json.dumps(filtered) if filtered else '[]'
-            return (filtered_json, len(filtered))
+            filtered = [name for name in items if active_map.get(name, True)]
+            filtered_json = json.dumps(filtered) if filtered else "[]"
+            return {"ui": {"items": items}, "result": (filtered_json, len(filtered))}
 
         except (json.JSONDecodeError, TypeError):
-            return ('[]', 0)
+            return {"ui": {"items": []}, "result": ("[]", 0)}
 
 
 # Keep old nodes for backward compatibility but mark as deprecated
