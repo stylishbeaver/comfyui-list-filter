@@ -273,11 +273,9 @@ app.registerExtension({
             });
             currentX += buttonSize + pillSpacing;
 
-            // If we added button, move to next line for items
-            if (itemsData.length > 0) {
-                currentX = pillX;
-                currentY += buttonSize + pillSpacing;
-            }
+            // Move to next line for items (always, to ensure proper height calculation)
+            currentX = pillX;
+            currentY += buttonSize + pillSpacing;
 
             // Calculate positions for each pill
             for (const item of itemsData) {
