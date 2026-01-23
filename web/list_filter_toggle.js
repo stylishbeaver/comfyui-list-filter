@@ -69,6 +69,13 @@ app.registerExtension({
                 };
             }
 
+            // Find and hide the trigger widget (used for forcing refresh)
+            const triggerWidget = node.widgets?.find(w => w.name === "trigger");
+            if (triggerWidget) {
+                triggerWidget.computeSize = () => [0, 0];
+                triggerWidget.hidden = true;
+            }
+
             // Initialize items data from widget value
             node.syncItemsData = function() {
                 const inputWidget = this.widgets?.find(w => w.name === "items");
@@ -148,6 +155,21 @@ app.registerExtension({
                 app.graph.setDirtyCanvas(true, true);
             };
 
+            // Force refresh by incrementing trigger
+            node.forceRefresh = function() {
+                const triggerWidget = this.widgets?.find(w => w.name === "trigger");
+                if (triggerWidget) {
+                    triggerWidget.value = (triggerWidget.value || 0) + 1;
+                    console.info("[List Filter Toggle] Force refresh, trigger =", triggerWidget.value);
+
+                    // Mark graph as changed to queue execution
+                    if (app.graph && typeof app.graph.change === "function") {
+                        app.graph.change();
+                    }
+                    app.graph.setDirtyCanvas(true, true);
+                }
+            };
+
             // Handle mouse clicks on pills
             node.onMouseDown = function(e, pos) {
                 const [x, y] = pos;
@@ -170,8 +192,17 @@ app.registerExtension({
                     }
 
                     if (clickedPill) {
-                        this.onPillClick(clickedPill);
-                        return true;
+                        // Handle button clicks
+                        if (clickedPill.button) {
+                            if (clickedPill.label === "button_refresh") {
+                                this.forceRefresh();
+                                return true;
+                            }
+                        } else {
+                            // Handle toggle pill clicks
+                            this.onPillClick(clickedPill);
+                            return true;
+                        }
                     }
                 }
 
@@ -221,18 +252,6 @@ app.registerExtension({
 
             const itemsData = parseItems(this.properties._itemsData || "[]");
 
-            if (itemsData.length === 0) {
-                // Draw a message when no items
-                ctx.font = "12px monospace";
-                ctx.fillStyle = "#999";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.fillText("No items to display", this.size[0] / 2, pillY + 20);
-                this._measuredHeight = pillY + 60;
-                this._tagAreaBottom = pillY + 40;
-                return;
-            }
-
             ctx.font = "13px sans-serif";
 
             const pillMaxWidth = this.size[0] - pillX * 2;
@@ -240,6 +259,25 @@ app.registerExtension({
             let currentY = pillY;
 
             const positions = [];
+
+            // Add refresh button
+            const buttonSize = 24;
+            positions.push({
+                x: currentX,
+                y: currentY,
+                w: buttonSize,
+                h: buttonSize,
+                label: "button_refresh",
+                display: "⟳",
+                button: true
+            });
+            currentX += buttonSize + pillSpacing;
+
+            // If we added button, move to next line for items
+            if (itemsData.length > 0) {
+                currentX = pillX;
+                currentY += buttonSize + pillSpacing;
+            }
 
             // Calculate positions for each pill
             for (const item of itemsData) {
@@ -274,54 +312,75 @@ app.registerExtension({
             for (const p of positions) {
                 // Draw pill background
                 ctx.beginPath();
-                ctx.fillStyle = p.active ? LiteGraph.WIDGET_BGCOLOR : "#2a2a2a";
-                ctx.roundRect(p.x, p.y, p.w, p.h, pillRadius);
-                ctx.fill();
 
-                ctx.strokeStyle = p.active ? "#444" : "#333";
-                ctx.lineWidth = 1;
-                ctx.stroke();
+                if (p.button) {
+                    // Button styling
+                    ctx.fillStyle = LiteGraph.NODE_DEFAULT_BOXCOLOR;
+                    ctx.roundRect(p.x, p.y, p.w, p.h, pillRadius);
+                    ctx.fill();
 
-                // Draw toggle switch background
-                const toggleX = p.x + 8;
-                const toggleY = p.y + (p.h - toggleHeight) / 2;
+                    ctx.strokeStyle = LiteGraph.NODE_DEFAULT_BOXCOLOR;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
 
-                ctx.beginPath();
-                ctx.fillStyle = "#1a1a1a";
-                ctx.roundRect(toggleX, toggleY, toggleWidth, toggleHeight, toggleHeight / 2);
-                ctx.fill();
+                    // Draw button icon
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillStyle = LiteGraph.WIDGET_TEXT_COLOR;
+                    ctx.font = "16px sans-serif";
+                    ctx.fillText(p.display, p.x + p.w / 2, p.y + p.h / 2);
+                } else {
+                    // Regular toggle pill styling
+                    ctx.fillStyle = p.active ? LiteGraph.WIDGET_BGCOLOR : "#2a2a2a";
+                    ctx.roundRect(p.x, p.y, p.w, p.h, pillRadius);
+                    ctx.fill();
 
-                // Draw toggle knob
-                ctx.beginPath();
-                const knobRadius = (toggleHeight - 4) / 2;
-                const knobX = p.active
-                    ? toggleX + toggleWidth - knobRadius - 4
-                    : toggleX + knobRadius + 4;
-                const knobY = toggleY + toggleHeight / 2;
+                    ctx.strokeStyle = p.active ? "#444" : "#333";
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
 
-                ctx.fillStyle = p.active ? "#4a9eff" : "#666";
-                ctx.arc(knobX, knobY, knobRadius, 0, 2 * Math.PI);
-                ctx.fill();
+                    // Draw toggle switch background
+                    const toggleX = p.x + 8;
+                    const toggleY = p.y + (p.h - toggleHeight) / 2;
 
-                // Draw label text
-                ctx.textAlign = "left";
-                ctx.textBaseline = "middle";
-                ctx.fillStyle = p.active ? "#fff" : "#888";
+                    ctx.beginPath();
+                    ctx.fillStyle = "#1a1a1a";
+                    ctx.roundRect(toggleX, toggleY, toggleWidth, toggleHeight, toggleHeight / 2);
+                    ctx.fill();
 
-                const textX = toggleX + toggleWidth + 12;
-                const textY = p.y + p.h / 2;
+                    // Draw toggle knob
+                    ctx.beginPath();
+                    const knobRadius = (toggleHeight - 4) / 2;
+                    const knobX = p.active
+                        ? toggleX + toggleWidth - knobRadius - 4
+                        : toggleX + knobRadius + 4;
+                    const knobY = toggleY + toggleHeight / 2;
 
-                // Truncate text if too long
-                let displayText = p.label;
-                const maxTextWidth = p.w - (textX - p.x) - 10;
-                if (ctx.measureText(displayText).width > maxTextWidth) {
-                    while (displayText.length > 0 && ctx.measureText(displayText + "...").width > maxTextWidth) {
-                        displayText = displayText.slice(0, -1);
+                    ctx.fillStyle = p.active ? "#4a9eff" : "#666";
+                    ctx.arc(knobX, knobY, knobRadius, 0, 2 * Math.PI);
+                    ctx.fill();
+
+                    // Draw label text
+                    ctx.textAlign = "left";
+                    ctx.textBaseline = "middle";
+                    ctx.fillStyle = p.active ? "#fff" : "#888";
+                    ctx.font = "13px sans-serif";
+
+                    const textX = toggleX + toggleWidth + 12;
+                    const textY = p.y + p.h / 2;
+
+                    // Truncate text if too long
+                    let displayText = p.label;
+                    const maxTextWidth = p.w - (textX - p.x) - 10;
+                    if (ctx.measureText(displayText).width > maxTextWidth) {
+                        while (displayText.length > 0 && ctx.measureText(displayText + "...").width > maxTextWidth) {
+                            displayText = displayText.slice(0, -1);
+                        }
+                        displayText += "...";
                     }
-                    displayText += "...";
-                }
 
-                ctx.fillText(displayText, textX, textY);
+                    ctx.fillText(displayText, textX, textY);
+                }
 
                 // Store pill position for click detection
                 this._pillMap.push({
@@ -329,7 +388,8 @@ app.registerExtension({
                     y: p.y,
                     w: p.w,
                     h: p.h,
-                    label: p.label
+                    label: p.label,
+                    button: p.button
                 });
             }
 

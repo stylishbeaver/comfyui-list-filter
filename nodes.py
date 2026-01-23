@@ -38,6 +38,11 @@ class ListFilterToggle:
                 "items": (any_typ, {
                     "default": "[]",
                 }),
+                "trigger": ("INT", {
+                    "default": 0,
+                    "min": 0,
+                    "max": 999999,
+                }),
             },
             "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO"}
         }
@@ -48,7 +53,7 @@ class ListFilterToggle:
     OUTPUT_NODE = True
     CATEGORY = "list/filtering"
 
-    def filter_items(self, items, unique_id="", extra_pnginfo=None):
+    def filter_items(self, items, trigger=0, unique_id="", extra_pnginfo=None):
         """
         Filter items based on toggle state stored in node properties.
 
@@ -59,6 +64,9 @@ class ListFilterToggle:
         - Python list/tuple (from LIST connections)
         - JSON string (from STRING connections)
         - Comma-separated string
+
+        Args:
+            trigger: Hidden counter that increments on refresh to force re-execution
         """
         try:
             # Parse input into a list
