@@ -13,6 +13,16 @@ logger = logging.getLogger("comfyui-list-filter")
 logger.setLevel(logging.INFO)
 
 
+# Wildcard type that accepts any input - trick from ComfyUI-Impact-Pack
+class AnyType(str):
+    """Special type that matches any ComfyUI type for input validation."""
+    def __ne__(self, __value: object) -> bool:
+        return False
+
+
+any_typ = AnyType("*")
+
+
 class ListFilterToggle:
     """
     Node that accepts a list and outputs filtered items based on toggle state.
@@ -25,94 +35,89 @@ class ListFilterToggle:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "items_json": ("STRING", {
+                "items": (any_typ, {
                     "default": "[]",
-                    "multiline": True
                 }),
             },
             "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO"}
         }
 
-    RETURN_TYPES = ("STRING", "INT")
+    RETURN_TYPES = ("LIST", "INT")
     RETURN_NAMES = ("filtered_items", "count")
     FUNCTION = "filter_items"
     OUTPUT_NODE = True
     CATEGORY = "list/filtering"
 
-    def filter_items(self, items_json, unique_id="", extra_pnginfo=None):
+    def filter_items(self, items, unique_id="", extra_pnginfo=None):
         """
         Filter items based on toggle state stored in node properties.
 
         The JavaScript extension manages the toggle state in node.properties._itemsData.
         This function reads that state from the workflow metadata and returns only active items.
+
+        Accepts any input type:
+        - Python list/tuple (from LIST connections)
+        - JSON string (from STRING connections)
+        - Comma-separated string
         """
         try:
-            # Parse input list
+            # Parse input into a list
             logger.info(
                 "[ListFilterToggle] filter_items start (node_id=%s, has_workflow=%s)",
                 unique_id,
                 bool(extra_pnginfo and "workflow" in extra_pnginfo),
             )
-            logger.info("[ListFilterToggle] raw items_json=%s", items_json)
-            logger.info(
-                "[ListFilterToggle] items_json type=%s",
-                type(items_json).__name__,
-            )
+            logger.info("[ListFilterToggle] raw items=%s", items)
+            logger.info("[ListFilterToggle] items type=%s", type(items).__name__)
 
+            # Handle different input types
             items_raw = None
-            if isinstance(items_json, (list, tuple)):
-                items_raw = list(items_json)
-                logger.info(
-                    "[ListFilterToggle] using items_json list (count=%d)",
-                    len(items_raw),
-                )
-            else:
-                if isinstance(items_json, str):
-                    items_raw = None
-                    if items_json.strip():
-                        if items_json.lstrip().startswith("["):
-                            try:
-                                items_raw = json.loads(items_json)
-                            except json.JSONDecodeError:
-                                items_raw = None
-                        if not isinstance(items_raw, list):
-                            items_raw = [
-                                part.strip()
-                                for part in items_json.split(",")
-                                if part.strip()
-                            ]
-                            logger.info(
-                                "[ListFilterToggle] items_json split (count=%d)",
-                                len(items_raw),
-                            )
+
+            # Direct list/tuple from LIST connections
+            if isinstance(items, (list, tuple)):
+                items_raw = list(items)
+                logger.info("[ListFilterToggle] received list (count=%d)", len(items_raw))
+
+            # String input (JSON or comma-separated)
+            elif isinstance(items, str):
+                items_raw = None
+                if items.strip():
+                    # Try JSON first
+                    if items.lstrip().startswith("["):
+                        try:
+                            items_raw = json.loads(items)
+                            logger.info("[ListFilterToggle] parsed JSON (count=%d)", len(items_raw))
+                        except json.JSONDecodeError:
+                            items_raw = None
+
+                    # Fall back to comma-separated
                     if not isinstance(items_raw, list):
-                        items_raw = []
-                else:
-                    logger.info(
-                        "[ListFilterToggle] items_json not usable (type=%s)",
-                        type(items_json).__name__,
-                    )
+                        items_raw = [part.strip() for part in items.split(",") if part.strip()]
+                        logger.info("[ListFilterToggle] split string (count=%d)", len(items_raw))
+
+                if not isinstance(items_raw, list):
                     items_raw = []
 
-            items = [str(item) for item in items_raw]
-            for idx, name in enumerate(items):
-                logger.info("[ListFilterToggle] item[%d]=%s", idx, name)
-            logger.info(
-                "[ListFilterToggle] parsed items count=%d",
-                len(items),
-            )
-            active_map = {name: True for name in items}
+            else:
+                logger.warning(
+                    "[ListFilterToggle] unexpected input type: %s",
+                    type(items).__name__,
+                )
+                items_raw = []
 
-            # Try to get toggle state from workflow metadata
-            filtered = items  # Default: return all items
+            # Convert all items to strings for consistency
+            items_list = [str(item) for item in items_raw]
+            logger.info("[ListFilterToggle] parsed items count=%d", len(items_list))
 
+            # Default: all items active
+            active_map = {name: True for name in items_list}
+
+            # Load toggle state from workflow metadata
             if extra_pnginfo and "workflow" in extra_pnginfo:
                 workflow = extra_pnginfo["workflow"]
                 if "nodes" in workflow:
-                    # Find this node in the workflow
                     for node in workflow["nodes"]:
                         if str(node.get("id")) == str(unique_id):
-                            # Get the toggle state from node properties
                             properties = node.get("properties", {})
                             items_data_json = properties.get("_itemsData", "[]")
 
@@ -120,34 +125,35 @@ class ListFilterToggle:
                                 items_data = json.loads(items_data_json)
                                 if isinstance(items_data, list):
                                     logger.info(
-                                        "[ListFilterToggle] toggle state items=%d",
+                                        "[ListFilterToggle] loaded toggle state (%d items)",
                                         len(items_data),
                                     )
                                     for item in items_data:
                                         name = str(item.get("name", ""))
                                         if name in active_map:
                                             active_map[name] = bool(item.get("active", True))
-                            except (json.JSONDecodeError, KeyError):
-                                logger.info(
-                                    "[ListFilterToggle] failed to parse _itemsData"
+                            except (json.JSONDecodeError, KeyError) as e:
+                                logger.warning(
+                                    "[ListFilterToggle] failed to parse _itemsData: %s", e
                                 )
-                                pass
                             break
 
-            filtered = [name for name in items if active_map.get(name, True)]
-            filtered_json = json.dumps(filtered) if filtered else "[]"
+            # Filter based on active state
+            filtered = [name for name in items_list if active_map.get(name, True)]
+
+            logger.info("[ListFilterToggle] filtered count=%d/%d", len(filtered), len(items_list))
             for idx, name in enumerate(filtered):
                 logger.info("[ListFilterToggle] output[%d]=%s", idx, name)
-            logger.info(
-                "[ListFilterToggle] filtered count=%d",
-                len(filtered),
-            )
-            logger.info("[ListFilterToggle] output json=%s", filtered_json)
-            return {"ui": {"items": (items,)}, "result": (filtered_json, len(filtered))}
 
-        except (json.JSONDecodeError, TypeError):
-            logger.info("[ListFilterToggle] invalid JSON input")
-            return {"ui": {"items": ([],)}, "result": ("[]", 0)}
+            # Return LIST type (Python list), not JSON string
+            return {
+                "ui": {"items": (items_list,)},
+                "result": (filtered, len(filtered))
+            }
+
+        except Exception as e:
+            logger.error("[ListFilterToggle] error: %s", e, exc_info=True)
+            return {"ui": {"items": ([],)}, "result": ([], 0)}
 
 
 # Keep old nodes for backward compatibility but mark as deprecated

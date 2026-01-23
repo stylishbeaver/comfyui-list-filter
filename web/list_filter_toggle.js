@@ -54,7 +54,7 @@ app.registerExtension({
             }
 
             // Find and hide the input widget
-            const inputWidget = node.widgets?.find(w => w.name === "items_json");
+            const inputWidget = node.widgets?.find(w => w.name === "items");
             if (inputWidget) {
                 inputWidget.computeSize = () => [0, 0];
                 inputWidget.hidden = true;
@@ -71,7 +71,7 @@ app.registerExtension({
 
             // Initialize items data from widget value
             node.syncItemsData = function() {
-                const inputWidget = this.widgets?.find(w => w.name === "items_json");
+                const inputWidget = this.widgets?.find(w => w.name === "items");
                 if (!inputWidget) return;
 
                 try {
@@ -124,7 +124,7 @@ app.registerExtension({
 
                 console.info("[List Filter Toggle] Applying items from server", items.length);
 
-                const inputWidget = this.widgets?.find(w => w.name === "items_json");
+                const inputWidget = this.widgets?.find(w => w.name === "items");
                 if (inputWidget) {
                     const serialized = JSON.stringify(items);
                     if (inputWidget.value !== serialized) {
@@ -216,7 +216,7 @@ app.registerExtension({
 
         // Override onDrawForeground to draw toggle pills
         nodeType.prototype.onDrawForeground = function(ctx) {
-            const inputWidget = this.widgets?.find(w => w.name === "items_json");
+            const inputWidget = this.widgets?.find(w => w.name === "items");
             if (!inputWidget || this.flags?.collapsed) return;
 
             const itemsData = parseItems(this.properties._itemsData || "[]");
