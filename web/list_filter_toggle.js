@@ -53,13 +53,6 @@ app.registerExtension({
                 node.properties._itemsData = "[]";
             }
 
-            // Set proper initial size to accommodate outputs
-            // Height = header (60) + toggle area (40) + output space (80)
-            // ComfyUI needs space for 2 outputs (filtered_items + count) = ~50px
-            if (!node.size || node.size[1] < 180) {
-                node.size = [240, 180];
-            }
-
             // Find and hide the input widget
             const inputWidget = node.widgets?.find(w => w.name === "items");
             if (inputWidget) {
@@ -74,13 +67,6 @@ app.registerExtension({
                     if (origCallback) origCallback.apply(this, arguments);
                     node.syncItemsData();
                 };
-            }
-
-            // Find and hide the output widget (updated by JS, read by downstream nodes)
-            const outputWidget = node.widgets?.find(w => w.name === "output");
-            if (outputWidget) {
-                outputWidget.computeSize = () => [0, 0];
-                outputWidget.hidden = true;
             }
 
             // Initialize items data from widget value or direct input
@@ -100,7 +86,6 @@ app.registerExtension({
                     if (!Array.isArray(items)) {
                         console.info("[List Filter Toggle] No valid items to sync");
                         this.setItemsData([]);
-                        this.updateOutputWidget();
                         return;
                     }
 
@@ -109,7 +94,6 @@ app.registerExtension({
                     // Handle empty list
                     if (items.length === 0) {
                         this.setItemsData([]);
-                        this.updateOutputWidget();
                         return;
                     }
 
@@ -124,7 +108,6 @@ app.registerExtension({
                     }));
 
                     this.setItemsData(newItemsData);
-                    this.updateOutputWidget();
                 } catch (e) {
                     console.error("[List Filter Toggle] Error syncing items:", e);
                     this.setItemsData([]);
@@ -167,25 +150,6 @@ app.registerExtension({
                 this.syncItemsData(items);
             };
 
-            // Update the filtered output widget value based on active items
-            node.updateOutputWidget = function() {
-                try {
-                    const outputWidget = this.widgets?.find(w => w.name === "output");
-                    if (!outputWidget) return;
-
-                    const itemsData = parseItems(this.properties._itemsData || "[]");
-                    const activeItems = itemsData.filter(i => i && i.active).map(i => i.name);
-
-                    // Update the output widget value (like EreNodes updates textWidget.value)
-                    outputWidget.value = JSON.stringify(activeItems);
-
-                    // Mark graph as dirty to trigger recomputation
-                    app.graph.setDirtyCanvas(true, true);
-                } catch (error) {
-                    console.error("[List Filter Toggle] Error updating output widget:", error);
-                }
-            };
-
             // Handle mouse clicks on pills
             node.onMouseDown = function(e, pos) {
                 const [x, y] = pos;
@@ -225,7 +189,6 @@ app.registerExtension({
                 if (item) {
                     item.active = !item.active;
                     this.setItemsData(itemsData);
-                    this.updateOutputWidget();
                     app.graph.setDirtyCanvas(true, true);
                 }
             };
@@ -271,8 +234,8 @@ app.registerExtension({
             if (!itemsData || itemsData.length === 0) {
                 this._pillMap = [];
                 this._tagAreaBottom = pillY;
-                const minHeight = 180;
-                this._measuredHeight = minHeight;
+                // Minimal height for empty node (header + small space for outputs)
+                this._measuredHeight = pillY + pillH + pillX;
                 return;
             }
 
@@ -390,13 +353,9 @@ app.registerExtension({
                 });
             }
 
-            // Calculate total height
-            this._tagAreaBottom = currentY;
-
-            // Minimum height to accommodate outputs (60px header + 40px content + 80px outputs)
-            const minHeight = 180;
-            const calculatedHeight = currentY + pillPadding + 60; // Add space below toggles for outputs
-            this._measuredHeight = Math.max(minHeight, calculatedHeight);
+            // Calculate total height (matching EreNodes pattern)
+            this._tagAreaBottom = currentY + pillH + pillPadding;
+            this._measuredHeight = currentY + pillH + pillX;
 
             // Resize node if needed
             if (isFinite(this._measuredHeight) && this._measuredHeight && this.size[1] !== this._measuredHeight) {
@@ -405,15 +364,13 @@ app.registerExtension({
             }
         };
 
-        // Override onResize to maintain minimum height
+        // Override onResize to maintain measured height
         const origResize = nodeType.prototype.onResize;
-        nodeType.prototype.onResize = function(size) {
-            if (origResize) origResize.apply(this, arguments);
+        nodeType.prototype.onResize = function() {
+            if (!this._measuredHeight) return;
 
-            // Enforce minimum height (must match minHeight in onDrawForeground)
-            const minHeight = 180;
-            if (this.size[1] < minHeight) {
-                this.size[1] = minHeight;
+            if (this.size[1] !== this._measuredHeight) {
+                this.setSize([this.size[0], this._measuredHeight]);
             }
         };
 

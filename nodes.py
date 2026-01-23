@@ -38,10 +38,6 @@ class ListFilterToggle:
                 "items": (any_typ, {
                     "default": "[]",
                 }),
-                "output": ("STRING", {
-                    "default": "[]",
-                    "multiline": True,
-                }),
             },
             "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO"}
         }
@@ -52,7 +48,7 @@ class ListFilterToggle:
     OUTPUT_NODE = True
     CATEGORY = "list/filtering"
 
-    def filter_items(self, items, output="[]", unique_id="", extra_pnginfo=None):
+    def filter_items(self, items, unique_id="", extra_pnginfo=None):
         """
         Filter items based on toggle state stored in node properties.
 
@@ -63,9 +59,6 @@ class ListFilterToggle:
         - Python list/tuple (from LIST connections)
         - JSON string (from STRING connections)
         - Comma-separated string
-
-        Args:
-            output: Widget that stores the filtered output (updated by JS when toggles change)
         """
         try:
             # Parse input into a list
@@ -152,14 +145,10 @@ class ListFilterToggle:
             for idx, name in enumerate(filtered):
                 logger.info("[ListFilterToggle] output[%d]=%s", idx, name)
 
-            # Update the output widget with filtered results (so JS can read/update it)
-            output_json = json.dumps(filtered)
-
             # Return LIST type (Python list), not JSON string
             return {
                 "ui": {
-                    "items": (items_list,),
-                    "output": (output_json,)
+                    "items": (items_list,)
                 },
                 "result": (filtered, len(filtered))
             }
